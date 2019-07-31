@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+To change this license header, choose License Headers in Project Properties.
+To change this template file, choose Tools | Templates
+and open the template in the editor.
+-->
+
+
+<root>
+    <tasks>
+        <task>
+            <taskName>CpuTask</taskName>
+            <cronTab>0/5 * * * * ?</cronTab>
+            <className>com.vt.ocs.oam.reportserver.task.CpuTask</className>
+            <sendEmail>true</sendEmail>
+        </task>
+
+        <task>
+            <taskName>RamTask</taskName>
+            <cronTab>0/7 * * * * ?</cronTab>
+            <className>com.vt.ocs.oam.reportserver.task.RamTask</className>
+            <sendEmail>true</sendEmail>
+        </task>
+    </tasks>
+</root>
