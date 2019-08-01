@@ -1,14 +1,12 @@
 package com.viettel.ocs.oam.reportserver.es.model;
 
-import lombok.Data;
-
-@Data
 public class ProcessResourceStat {
 	private String process_name;
 	private String node_name;
 	private int percent_cpu;
 	private int percent_ram;
 	private String time;
+	
 	public String getProcess_name() {
 		return process_name;
 	}

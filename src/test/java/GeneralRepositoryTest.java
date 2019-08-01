@@ -18,7 +18,7 @@ public class GeneralRepositoryTest {
 	private RepositoryFactory repositoryFactory;
 
 	@Test
-	public void TestGenData() {
+	public void TestGenerateData() {
 		assertNotNull(repositoryFactory);
 		GeneralRepository generalRepository = repositoryFactory.getGeneralRepository();
 		generalRepository.generateData("application_resource_stat", 60, "2019-07-20 10:00:00", "2019-07-30 10:00:00");
