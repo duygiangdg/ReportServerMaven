@@ -13,12 +13,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.viettel.ocs.oam.reportserver.es.model.ProcessResourceStat;
 
 @Service
-public class ProcessResourceStatService {
+public class ProcessResourceService {
 	private RestHighLevelClient client;
     private ObjectMapper objectMapper;
     
     @Autowired
-    public ProcessResourceStatService(RestHighLevelClient client) {
+    public ProcessResourceService(RestHighLevelClient client) {
         this.client = client;
         this.objectMapper = new ObjectMapper();
     }

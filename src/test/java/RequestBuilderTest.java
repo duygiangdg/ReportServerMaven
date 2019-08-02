@@ -2,6 +2,7 @@ import static org.junit.Assert.fail;
 
 import java.util.LinkedHashMap;
 
+import org.apache.log4j.Logger;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.client.RequestOptions;
@@ -20,6 +21,7 @@ import com.viettel.ocs.oam.reportserver.es.util.RequestWrapper;
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(classes = ElasticsearchConfig.class)
 public class RequestBuilderTest {
+	private final static Logger logger = Logger.getLogger(RequestBuilderTest.class);
 
 	@Autowired
     RestHighLevelClient client;
@@ -42,12 +44,12 @@ public class RequestBuilderTest {
 		try {
 			requestWrapper = builder.build();
 			RequestBuilder requestBuilder = new RequestBuilder();
-			String index = "application_resource_stat_2019_07_20_3months";
+			String index = "system_resource_stat_2019_07_20_3months";
 			
 			SearchRequest request;
 			request = requestBuilder.statisticMaxMinAvgSum(requestWrapper, index);
 			
-			System.out.println(request);
+			logger.debug(request);
 		} catch (InvalidRequestException ex) {
 			ex.printStackTrace();
 			fail();
@@ -79,13 +81,13 @@ public class RequestBuilderTest {
 			SearchRequest request;
 			request = requestBuilder.statisticInMinutes(requestWrapper, index);
 			
-			System.out.println(request);
+			logger.debug(request);
 			
 			SearchResponse response = client.search(request, RequestOptions.DEFAULT);
 			String[] keyGroupFields = groupFields.keySet().toArray(new String[groupFields.keySet().size()]);
 			String processedResponse = requestBuilder.processStatisticInMinutes(response, keyGroupFields);
 			
-			System.out.println(processedResponse);
+			logger.debug(processedResponse);
 			
 		} catch (Exception ex) {
 			ex.printStackTrace();

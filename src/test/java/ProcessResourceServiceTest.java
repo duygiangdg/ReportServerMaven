@@ -7,14 +7,14 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import com.viettel.ocs.oam.reportserver.es.config.ElasticsearchConfig;
-import com.viettel.ocs.oam.reportserver.es.service.ProcessResourceStatService;
+import com.viettel.ocs.oam.reportserver.es.service.ProcessResourceService;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(classes = ElasticsearchConfig.class)
-public class ProcessResourceStatServiceTest {
+public class ProcessResourceServiceTest {
 	
 	@Autowired
-	ProcessResourceStatService service;
+	ProcessResourceService service;
 	
 	@Test
 	public void testNotNull() {
