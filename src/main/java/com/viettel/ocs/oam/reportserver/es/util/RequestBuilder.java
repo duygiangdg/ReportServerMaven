@@ -2,8 +2,8 @@ package com.viettel.ocs.oam.reportserver.es.util;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.elasticsearch.action.search.SearchRequest;
@@ -28,22 +28,11 @@ public class RequestBuilder {
 		// Using LinkedHashMap to preserve the insertion orders
 		LinkedHashMap<String, String[]> whereFields = requestWrapper.getWhereFields();
 		LinkedHashMap<String, String> groupFields = requestWrapper.getGroupFields();
-		LinkedHashMap<String, String> calculatedFields = requestWrapper.getCalculatedFields();
-		LinkedHashMap<String, String> orderFields = requestWrapper.getOrderFields();
+		List<String[]> calculatedFields = requestWrapper.getCalculatedFields();
 		String fromTime = requestWrapper.getFromTime();
 		String toTime = requestWrapper.getToTime();
 		String timeField = requestWrapper.getTimeField();
 		SimpleDateFormat timeFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
-		// Create LinkedHashMap : calculatedField ==>
-		// operator_calculatedField
-		// Ex : (percent_usage, avg_percent_usage)
-		LinkedHashMap<String, String> bucketFieldsHashMap = new LinkedHashMap<String, String>();
-		for (Map.Entry<String, String> entry : calculatedFields.entrySet()) {
-			String aggField = entry.getKey();
-			String aggOperator = entry.getValue();
-			bucketFieldsHashMap.put(aggField, aggOperator + "_" + aggField);
-		}
 
 		String[] indices = new String[] { indexName };
 		SearchRequest searchRequest = new SearchRequest(indices);
@@ -99,52 +88,22 @@ public class RequestBuilder {
 			String groupField = keyGroupFields[keyIndex];
 			String groupOrder = groupFields.get(groupField);
 
-			// Packaging from deepest layer (most-child layer) to outer
-			// layers
+			// Packaging from deepest layer (most-child layer) to outer layers
 			if (keyIndex == (keyGroupFields.length - 1)) {
-				// Order of group field
 				if (groupOrder.equalsIgnoreCase("asc")) {
 					groupBuilder = AggregationBuilders.terms(groupField).field(groupField).order(BucketOrder.key(true));
-
 				} else if (groupOrder.equalsIgnoreCase("desc")) {
 					groupBuilder = AggregationBuilders.terms(groupField).field(groupField)
 							.order(BucketOrder.key(false));
-
-					// Process orderFields
-					// When deepest group-field order is 'none', the
-					// calculated-fields order is validated
-				} else if (groupOrder.equalsIgnoreCase("none")) {
-					if (orderFields != null && orderFields.size() > 0) {
-						// Save order of calculated fields
-						ArrayList<BucketOrder> bucketOrders = new ArrayList<BucketOrder>();
-						for (Map.Entry<String, String> entry : orderFields.entrySet()) {
-							String orderField = entry.getKey();
-							String orderOperator = entry.getValue();
-							if (orderOperator.equalsIgnoreCase("asc")) {
-								bucketOrders.add(BucketOrder.aggregation(bucketFieldsHashMap.get(orderField), true));
-							} else if (orderOperator.equalsIgnoreCase("desc")) {
-								bucketOrders.add(BucketOrder.aggregation(bucketFieldsHashMap.get(orderField), false));
-							}
-						}
-
-						// Apply the calculated-fields order list into
-						// deepest layer
-						if (bucketOrders.size() > 0)
-							groupBuilder = AggregationBuilders.terms(groupField).field(groupField)
-									.order(BucketOrder.compound(bucketOrders));
-						else
-							groupBuilder = AggregationBuilders.terms(groupField).field(groupField);
-					} else {
-						groupBuilder = AggregationBuilders.terms(groupField).field(groupField);
-					}
+				} else {
+					groupBuilder = AggregationBuilders.terms(groupField).field(groupField);
 				}
 
 				// Process calculatedFields
-				// Attach these calculated fields into buckets of deepest
-				// layer
-				for (Map.Entry<String, String> entry : calculatedFields.entrySet()) {
-					String aggField = entry.getKey();
-					String aggOperator = entry.getValue();
+				// Attach these calculated fields into buckets of deepest layer
+				for (String[] entry : calculatedFields) {
+					String aggField = entry[0];
+					String aggOperator = entry[1];
 
 					if (aggOperator.equals("avg")) {
 						groupBuilder = groupBuilder
@@ -161,10 +120,8 @@ public class RequestBuilder {
 					}
 				}
 
-				// In case of not deepest layers, simply package its child
-				// layer
-				// Consider the order of group fields (given by user like :
-				// asc, desc, none)
+				// In case of not deepest layers, simply package its child layer
+				// Consider the order of group fields (given by user like : asc, desc, none)
 			} else {
 				if (groupOrder.equalsIgnoreCase("asc")) {
 					groupBuilder = AggregationBuilders.terms(groupField).field(groupField).order(BucketOrder.key(true))
@@ -172,7 +129,7 @@ public class RequestBuilder {
 				} else if (groupOrder.equalsIgnoreCase("desc")) {
 					groupBuilder = AggregationBuilders.terms(groupField).field(groupField).order(BucketOrder.key(false))
 							.subAggregation(groupBuilder);
-				} else if (groupOrder.equalsIgnoreCase("none")) {
+				} else {
 					groupBuilder = AggregationBuilders.terms(groupField).field(groupField).subAggregation(groupBuilder);
 				}
 			}
@@ -181,15 +138,14 @@ public class RequestBuilder {
 		// Packaging groupBuilder as a child layer of aggBuilder
 		// In case of groupFields is not empty
 		if (keyGroupFields.length > 0) {
-			aggBuilder = aggBuilder.subAggregation(groupBuilder);
+			aggBuilder = groupBuilder.subAggregation(aggBuilder);
 		}
 
-		// In case of groupField is empty. aggBuider directly contains
-		// calculated fields
+		// In case of groupField is empty. aggBuider directly contains calculated fields
 		if (keyGroupFields.length == 0) {
-			for (Map.Entry<String, String> entry : calculatedFields.entrySet()) {
-				String aggField = entry.getKey();
-				String aggOperator = entry.getValue();
+			for (String[] entry : calculatedFields) {
+				String aggField = entry[0];
+				String aggOperator = entry[1];
 
 				if (aggOperator.equalsIgnoreCase("avg")) {
 					aggBuilder = aggBuilder.subAggregation(AggregationBuilders.avg("avg_" + aggField).field(aggField));
@@ -215,23 +171,12 @@ public class RequestBuilder {
 		// Using LinkedHashMap to preserve the insertion orders
 		LinkedHashMap<String, String[]> whereFields = requestWrapper.getWhereFields();
 		LinkedHashMap<String, String> groupFields = requestWrapper.getGroupFields();
-		LinkedHashMap<String, String> calculatedFields = requestWrapper.getCalculatedFields();
-		LinkedHashMap<String, String> orderFields = requestWrapper.getOrderFields();
+		List<String[]> calculatedFields = requestWrapper.getCalculatedFields();
 		String fromTime = requestWrapper.getFromTime();
 		String toTime = requestWrapper.getToTime();
 		int interval = requestWrapper.getInterval();
 		String timeField = requestWrapper.getTimeField();
 		SimpleDateFormat timeFormatter = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-
-		// Create LinkedHashMap : calculatedField ==>
-		// operator_calculatedField
-		// Ex : (percent_usage, avg_percent_usage)
-		LinkedHashMap<String, String> bucketFieldsHashMap = new LinkedHashMap<String, String>();
-		for (Map.Entry<String, String> entry : calculatedFields.entrySet()) {
-			String aggField = entry.getKey();
-			String aggOperator = entry.getValue();
-			bucketFieldsHashMap.put(aggField, aggOperator + "_" + aggField);
-		}
 
 		String[] indices = new String[] { indexName };
 		SearchRequest searchRequest = new SearchRequest(indices);
@@ -288,8 +233,7 @@ public class RequestBuilder {
 			String groupField = keyGroupFields[keyIndex];
 			String groupOrder = groupFields.get(groupField);
 
-			// Packaging from deepest layer (most-child layer) to outer
-			// layers
+			// Packaging from deepest layer (most-child layer) to outer layers
 			if (keyIndex == (keyGroupFields.length - 1)) {
 				// Order of group field
 				if (groupOrder.equalsIgnoreCase("asc")) {
@@ -300,60 +244,34 @@ public class RequestBuilder {
 							.order(BucketOrder.key(false));
 
 					// Process orderFields
-					// When deepest group-field order is 'none', the
-					// calculated-fields order is validated
-				} else if (groupOrder.equalsIgnoreCase("none")) {
-					if (orderFields != null && orderFields.size() > 0) {
-						// Save order of calculated fields
-						ArrayList<BucketOrder> bucketOrders = new ArrayList<BucketOrder>();
-						for (Map.Entry<String, String> entry : orderFields.entrySet()) {
-							String orderField = entry.getKey();
-							String orderOperator = entry.getValue();
-							if (orderOperator.equalsIgnoreCase("asc")) {
-								bucketOrders.add(BucketOrder.aggregation(bucketFieldsHashMap.get(orderField), true));
-							} else if (orderOperator.equalsIgnoreCase("desc")) {
-								bucketOrders.add(BucketOrder.aggregation(bucketFieldsHashMap.get(orderField), false));
-							}
-						}
-
-						// Apply the calculated-fields order list into
-						// deepest layer
-						if (bucketOrders.size() > 0)
-							groupBuilder = AggregationBuilders.terms(groupField).field(groupField)
-									.order(BucketOrder.compound(bucketOrders));
-						else
-							groupBuilder = AggregationBuilders.terms(groupField).field(groupField);
-					} else {
-						groupBuilder = AggregationBuilders.terms(groupField).field(groupField);
-					}
+					// When deepest group-field order is 'none', the calculated-fields order is validated
+				} else {
+					groupBuilder = AggregationBuilders.terms(groupField).field(groupField);
 				}
 
 				// Process calculatedFields
-				// Attach these calculated fields into buckets of deepest
-				// layer
-				for (Map.Entry<String, String> entry : calculatedFields.entrySet()) {
-					String aggField = entry.getKey();
-					String aggOperator = entry.getValue();
+				// Attach these calculated fields into buckets of deepest layer
+				for (String[] entry : calculatedFields) {
+					String aggField = entry[0];
+					String aggOperator = entry[1];
 
 					if (aggOperator.equals("avg")) {
-						groupBuilder = groupBuilder
+						aggBuilder = aggBuilder
 								.subAggregation(AggregationBuilders.avg("avg_" + aggField).field(aggField));
 					} else if (aggOperator.equalsIgnoreCase("min")) {
-						groupBuilder = groupBuilder
+						aggBuilder = aggBuilder
 								.subAggregation(AggregationBuilders.min("min_" + aggField).field(aggField));
 					} else if (aggOperator.equalsIgnoreCase("max")) {
-						groupBuilder = groupBuilder
+						aggBuilder = aggBuilder
 								.subAggregation(AggregationBuilders.max("max_" + aggField).field(aggField));
 					} else if (aggOperator.equalsIgnoreCase("sum")) {
-						groupBuilder = groupBuilder
+						aggBuilder = aggBuilder
 								.subAggregation(AggregationBuilders.sum("sum_" + aggField).field(aggField));
 					}
 				}
 
-				// In case of not deepest layers, simply package its child
-				// layer
-				// Consider the order of group fields (given by user like :
-				// asc, desc, none)
+				// In case of not deepest layers, simply package its child layer
+				// Consider the order of group fields (given by user like : asc, desc, none)
 			} else {
 				if (groupOrder.equalsIgnoreCase("asc")) {
 					groupBuilder = AggregationBuilders.terms(groupField).field(groupField).order(BucketOrder.key(true))
@@ -370,26 +288,7 @@ public class RequestBuilder {
 		// Packaging groupBuilder as a child layer of aggBuilder
 		// In case of groupFields is not empty
 		if (keyGroupFields.length > 0) {
-			aggBuilder = aggBuilder.subAggregation(groupBuilder);
-		}
-
-		// In case of groupField is empty. aggBuider directly contains
-		// calculated fields
-		if (keyGroupFields.length == 0) {
-			for (Map.Entry<String, String> entry : calculatedFields.entrySet()) {
-				String aggField = entry.getKey();
-				String aggOperator = entry.getValue();
-
-				if (aggOperator.equalsIgnoreCase("avg")) {
-					aggBuilder = aggBuilder.subAggregation(AggregationBuilders.avg("avg_" + aggField).field(aggField));
-				} else if (aggOperator.equalsIgnoreCase("min")) {
-					aggBuilder = aggBuilder.subAggregation(AggregationBuilders.min("min_" + aggField).field(aggField));
-				} else if (aggOperator.equalsIgnoreCase("max")) {
-					aggBuilder = aggBuilder.subAggregation(AggregationBuilders.max("max_" + aggField).field(aggField));
-				} else if (aggOperator.equalsIgnoreCase("sum")) {
-					aggBuilder = aggBuilder.subAggregation(AggregationBuilders.sum("sum_" + aggField).field(aggField));
-				}
-			}
+			aggBuilder = groupBuilder.subAggregation(aggBuilder);
 		}
 
 		// Packaging queryBuilder, aggBuilder as a request

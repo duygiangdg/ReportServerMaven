@@ -15,14 +15,14 @@ import com.viettel.ocs.oam.reportserver.es.util.LineChart;
 public class LineChartTest {
 
 	@Test
-	public void testDrawChart() {
+	public void drawChartToImage() {
 		Random random = new Random();
 
 		List<String> groups = new ArrayList<String>(); 
 		groups.add("node1"); 
 		groups.add("process1");
 		
-		Map<String, Map<String, Float>> fieldMap = new HashMap<String, Map<String, Float>>();
+		Map<String, Map<String, Double>> fieldMap = new HashMap<String, Map<String, Double>>();
 		String[] statisticFields = new String[] {"max_cpu_percent", "avg_cpu_percent", "max_ram_percent", "avg_ram_percent"};
 		String[] times = new String[] {
 			"2019-08-04 01:00:00", "2019-08-04 02:00:00", 
@@ -31,15 +31,15 @@ public class LineChartTest {
 		};
 		
 		for (String field: statisticFields) {
-			Map<String, Float> timeMap = new HashMap<String, Float>();
+			Map<String, Double> timeMap = new HashMap<String, Double>();
 			for (String time: times) {
-				timeMap.put(time, random.nextFloat()*100);
+				timeMap.put(time, random.nextDouble()*100);
 			}
 			fieldMap.put(field, timeMap);
 		}
 		
 		try {
-			LineChart.drawChartToImage(fieldMap, groups);
+			LineChart.drawChartToImage(fieldMap, groups, "src/main/resources/chart.png");
 		} catch (IOException | ParseException e) {
 			e.printStackTrace();
 			fail();

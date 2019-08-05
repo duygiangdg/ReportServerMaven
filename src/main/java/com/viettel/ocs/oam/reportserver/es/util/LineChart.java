@@ -132,14 +132,17 @@ public class LineChart {
 		series.setShapeProperties(properties);
 	}
 
-	public static String drawChartToImage(Map<String, Map<String, Float>> fieldMap, List<String> groups) throws IOException, ParseException {
+	public static void drawChartToImage(
+			Map<String, Map<String, Double>> fieldMap, List<String> groups, String outputPath
+	)throws IOException, ParseException {
+		
 		String title = "";
 		for (String group: groups) title += group + " ";
 		
 		TimeSeriesCollection dataset = new TimeSeriesCollection();
 		for (String field: fieldMap.keySet()) {
 			TimeSeries series = new TimeSeries(field);
-			Map<String, Float> timeMap = fieldMap.get(field);
+			Map<String, Double> timeMap = fieldMap.get(field);
 			for (String time: timeMap.keySet()) {
 				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 				Date date = sdf.parse(time);
@@ -158,10 +161,7 @@ public class LineChart {
 		NumberAxis range = (NumberAxis) xyplot.getRangeAxis();
 		range.setRange(0.0, 100.0);
 		
-		String outPath = "src/main/resources/chart.png";
-		OutputStream out = new FileOutputStream(outPath);
+		OutputStream out = new FileOutputStream(outputPath);
 		ChartUtilities.writeChartAsPNG(out,	chart, 1000, 400);
-		
-		return outPath;
 	}
 }

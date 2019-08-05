@@ -4,16 +4,16 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
-import com.viettel.ocs.oam.reportserver.es.util.InvalidRequestException;
+import com.viettel.ocs.oam.reportserver.es.exception.InvalidRequestException;
 
 public class RequestWrapper {
 	
 	private LinkedHashMap<String, String[]> whereFields;
 	private LinkedHashMap<String, String> groupFields;
-	private LinkedHashMap<String, String> calculatedFields;
-	private LinkedHashMap<String, String> orderFields;
+	private List<String[]> calculatedFields;
 	private int size;
 	private String fromTime;
 	private String toTime;
@@ -21,14 +21,13 @@ public class RequestWrapper {
 	private String timeField;
 	
 	private RequestWrapper(
-		LinkedHashMap<String, String[]> whereFields, LinkedHashMap<String, String> groupFields,
-		LinkedHashMap<String, String> calculatedFields,	LinkedHashMap<String, String> orderFields,
-		int size, String fromTime, String toTime, int interval,	String timeField
+		LinkedHashMap<String, String[]> whereFields, LinkedHashMap<String, 
+		String> groupFields, List<String[]> calculatedFields, int size, 
+		String fromTime, String toTime, int interval, String timeField
 	) {
 		this.whereFields = whereFields;
 		this.groupFields = groupFields;
 		this.calculatedFields = calculatedFields;
-		this.orderFields = orderFields;
 		this.size = size;
 		this.fromTime = fromTime;
 		this.toTime = toTime;
@@ -44,12 +43,8 @@ public class RequestWrapper {
 		return groupFields;
 	}
 	
-	public LinkedHashMap<String, String> getCalculatedFields() {
+	public List<String[]> getCalculatedFields() {
 		return calculatedFields;
-	}
-	
-	public LinkedHashMap<String, String> getOrderFields() {
-		return orderFields;
 	}
 	
 	public int getSize() {
@@ -74,16 +69,15 @@ public class RequestWrapper {
 	
 	@Override
 	public String toString() {
-		return "RequestWrapper [whereFields=" + whereFields + ", groupFields=" + groupFields + ", calculatedFields="
-				+ calculatedFields + ", orderFields=" + orderFields + ", size=" + size + ", fromTime=" + fromTime
+		return "RequestWrapper [whereFields=" + whereFields + ", groupFields=" + groupFields + 
+				", calculatedFields=" + calculatedFields + ", size=" + size + ", fromTime=" + fromTime
 				+ ", toTime=" + toTime + ", interval=" + interval + ", timeField=" + timeField + "]";
 	}
 	
 	public static class Builder {
 		private LinkedHashMap<String, String[]> whereFields;
 		private LinkedHashMap<String, String> groupFields;
-		private LinkedHashMap<String, String> calculatedFields;
-		private LinkedHashMap<String, String> orderFields;
+		private List<String[]> calculatedFields;
 		private int size;
 		private String fromTime;
 		private String toTime;
@@ -100,12 +94,8 @@ public class RequestWrapper {
 			this.groupFields = groupFields;
 		}
 		
-		public void setCalculatedFields(LinkedHashMap<String, String> calculatedFields) {
+		public void setCalculatedFields(List<String[]> calculatedFields) {
 			this.calculatedFields = calculatedFields;
-		}
-		
-		public void setOrderFields(LinkedHashMap<String, String> orderFields) {
-			this.orderFields = orderFields;
 		}
 
 		public void setSize(int size) {
@@ -144,21 +134,10 @@ public class RequestWrapper {
 			if (calculatedFields == null)
 				throw new InvalidRequestException("calculatedFields must not be null.");
 			
-			for (Map.Entry<String, String> entry : calculatedFields.entrySet()) {
-				String calOperator = entry.getValue();
+			for (String[] entry : calculatedFields) {
+				String calOperator = entry[1];
 				if (!isValidCalculationOperator(calOperator))
 					throw new InvalidRequestException("Calculation Operator is not correct.");
-			}
-			
-			if (orderFields != null && orderFields.size() > 0) {
-				for (Map.Entry<String, String> entry : orderFields.entrySet()) {
-					String orderField = entry.getKey();
-					String orderValue = entry.getValue();
-					if (!calculatedFields.containsKey(orderField))
-						throw new InvalidRequestException("orderFields is not valid.");
-					else if (!isValidGroupOperator(orderValue))
-						throw new InvalidRequestException("Operator in orderFields is not correct. The set of valid operators is {asc, desc, none}.");
-				}
 			}
 			
 			// Check if fromTime field is null and its format
@@ -179,7 +158,7 @@ public class RequestWrapper {
 			if (timeField == null)
 				throw new InvalidRequestException("Field 'timeField' is not found.");
 			
-			return new RequestWrapper(whereFields, groupFields, calculatedFields, orderFields,
+			return new RequestWrapper(whereFields, groupFields, calculatedFields,
 					size, fromTime, toTime, interval, timeField);
 		}
 		
