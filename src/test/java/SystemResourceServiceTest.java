@@ -30,15 +30,20 @@ public class SystemResourceServiceTest {
 		try {
 			Map<String, Map<String, Map<String, Double>>> response = 
 					service.getSummary("2019-07-24 10:00:00", "2019-07-25 10:00:00", 30);
+			List<String> imagePaths = new ArrayList<String>();
 			for (Entry<String, Map<String, Map<String, Double>>> nodeEntry: response.entrySet()) {
 				String nodeKey = nodeEntry.getKey();
 				Map<String, Map<String, Double>> nodeValue = nodeEntry.getValue();
 				List<String> groupList = new ArrayList<String>();
 				groupList.add(nodeKey);
-				LineChart.drawChartToImage(nodeValue, groupList,
-						"src/main/resources/system_resource_summary-" + nodeKey + ".png");
+				
+				String path = "src/main/resources/system_resource_summary-" + nodeKey + ".png";
+				imagePaths.add(path);
+				
+				String outputPath = "src/main/resources/system_resource_summary.xls";
+				LineChart.drawChartToImage(nodeValue, groupList, path);
+				LineChart.importImagesToExcel(imagePaths, outputPath);
 			}
-			
 		} catch (InvalidRequestException | IOException | ParseException e) {
 			e.printStackTrace();
 			fail();

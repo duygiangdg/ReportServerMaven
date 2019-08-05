@@ -1,7 +1,9 @@
 package com.viettel.ocs.oam.reportserver.es.util;
 
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -9,8 +11,16 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.compress.utils.IOUtils;
+import org.apache.poi.hssf.usermodel.HSSFClientAnchor;
+import org.apache.poi.hssf.usermodel.HSSFPatriarch;
+import org.apache.poi.hssf.usermodel.HSSFPicture;
+import org.apache.poi.hssf.usermodel.HSSFSheet;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.ClientAnchor;
 import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xddf.usermodel.PresetColor;
 import org.apache.poi.xddf.usermodel.XDDFColor;
@@ -132,36 +142,69 @@ public class LineChart {
 		series.setShapeProperties(properties);
 	}
 
-	public static void drawChartToImage(
-			Map<String, Map<String, Double>> fieldMap, List<String> groups, String outputPath
-	)throws IOException, ParseException {
-		
+	public static void drawChartToImage(Map<String, Map<String, Double>> fieldMap, List<String> groups,
+			String outputPath) throws IOException, ParseException {
+
 		String title = "";
-		for (String group: groups) title += group + " ";
-		
+		for (String group : groups)
+			title += group + " ";
+
 		TimeSeriesCollection dataset = new TimeSeriesCollection();
-		for (String field: fieldMap.keySet()) {
+		for (String field : fieldMap.keySet()) {
 			TimeSeries series = new TimeSeries(field);
 			Map<String, Double> timeMap = fieldMap.get(field);
-			for (String time: timeMap.keySet()) {
+			for (String time : timeMap.keySet()) {
 				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 				Date date = sdf.parse(time);
 				series.add(new Second(date), timeMap.get(time));
 			}
 			dataset.addSeries(series);
 		}
-		
-		JFreeChart chart = ChartFactory.createXYLineChart(title, "Time", "Percent", 
-				dataset, PlotOrientation.VERTICAL, true, false, false);
-		
+
+		JFreeChart chart = ChartFactory.createXYLineChart(
+				title, "Time", "Percent", dataset, PlotOrientation.VERTICAL, true, false, false);
+
 		XYPlot xyplot = (XYPlot) chart.getXYPlot();
 		xyplot.setDomainAxis(new DateAxis());
 		DateAxis axis = (DateAxis) xyplot.getDomainAxis();
 		axis.setDateFormatOverride(new SimpleDateFormat("HH:mm"));
 		NumberAxis range = (NumberAxis) xyplot.getRangeAxis();
 		range.setRange(0.0, 100.0);
-		
+
 		OutputStream out = new FileOutputStream(outputPath);
-		ChartUtilities.writeChartAsPNG(out,	chart, 1000, 400);
+		ChartUtilities.writeChartAsPNG(out, chart, 1500, 600);
+	}
+
+	public static void importImagesToExcel(List<String> imagePaths, String outputPath) throws IOException {
+		HSSFWorkbook workbook = new HSSFWorkbook();
+		HSSFSheet sheet = workbook.createSheet("Charts");
+
+		for (int imgIdx = 0; imgIdx < imagePaths.size(); imgIdx++) {
+			String path = imagePaths.get(imgIdx);
+			InputStream image = new FileInputStream(path);
+			byte[] bytes = IOUtils.toByteArray(image);
+			int imageId = workbook.addPicture(bytes, Workbook.PICTURE_TYPE_PNG);
+			image.close();
+
+			HSSFPatriarch drawing = sheet.createDrawingPatriarch();
+
+			ClientAnchor anchor = new HSSFClientAnchor();
+
+			HSSFPicture picture = drawing.createPicture(anchor, imageId);
+
+			anchor.setCol1(1);
+			anchor.setRow1(1 + 30 * imgIdx);
+
+			picture.resize();
+			
+			double imgHeight = picture.getImageDimension().getHeight();
+			double cellHeight = sheet.createRow(0).getHeightInPoints();
+			picture.resize(30 * cellHeight / imgHeight);
+		}
+
+		FileOutputStream out = new FileOutputStream(outputPath);
+		workbook.write(out);
+		workbook.close();
+		out.close();
 	}
 }
