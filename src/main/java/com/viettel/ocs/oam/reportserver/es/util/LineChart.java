@@ -2,6 +2,12 @@ package com.viettel.ocs.oam.reportserver.es.util;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
@@ -29,83 +35,133 @@ import org.apache.poi.xssf.usermodel.XSSFClientAnchor;
 import org.apache.poi.xssf.usermodel.XSSFDrawing;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.jfree.chart.ChartFactory;
+import org.jfree.chart.ChartUtilities;
+import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.DateAxis;
+import org.jfree.chart.axis.NumberAxis;
+import org.jfree.chart.plot.PlotOrientation;
+import org.jfree.chart.plot.XYPlot;
+import org.jfree.data.time.Second;
+import org.jfree.data.time.TimeSeries;
+import org.jfree.data.time.TimeSeriesCollection;
 
 /**
  * Line chart example.
  */
 public class LineChart {
+	private LineChart() {
 
-    public static void main(String[] args) throws IOException {
-        try (XSSFWorkbook wb = new XSSFWorkbook()) {
-            XSSFSheet sheet = wb.createSheet("linechart");
-            final int NUM_OF_ROWS = 3;
-            final int NUM_OF_COLUMNS = 10;
+	}
 
-            // Create a row and put some cells in it. Rows are 0 based.
-            Row row;
-            Cell cell;
-            for (int rowIndex = 0; rowIndex < NUM_OF_ROWS; rowIndex++) {
-                row = sheet.createRow((short) rowIndex);
-                for (int colIndex = 0; colIndex < NUM_OF_COLUMNS; colIndex++) {
-                    cell = row.createCell((short) colIndex);
-                    cell.setCellValue(colIndex * (rowIndex + 1.0));
-                }
-            }
+	public static void main(String[] args) throws IOException {
+		try (XSSFWorkbook wb = new XSSFWorkbook()) {
+			XSSFSheet sheet = wb.createSheet("linechart");
+			final int NUM_OF_ROWS = 3;
+			final int NUM_OF_COLUMNS = 10;
 
-            XSSFDrawing drawing = sheet.createDrawingPatriarch();
-            XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 0, 5, 10, 15);
+			// Create a row and put some cells in it. Rows are 0 based.
+			Row row;
+			Cell cell;
+			for (int rowIndex = 0; rowIndex < NUM_OF_ROWS; rowIndex++) {
+				row = sheet.createRow((short) rowIndex);
+				for (int colIndex = 0; colIndex < NUM_OF_COLUMNS; colIndex++) {
+					cell = row.createCell((short) colIndex);
+					cell.setCellValue(colIndex * (rowIndex + 1.0));
+				}
+			}
 
-            XSSFChart chart = drawing.createChart(anchor);
-            XDDFChartLegend legend = chart.getOrAddLegend();
-            legend.setPosition(LegendPosition.TOP_RIGHT);
+			XSSFDrawing drawing = sheet.createDrawingPatriarch();
+			XSSFClientAnchor anchor = drawing.createAnchor(0, 0, 0, 0, 0, 5, 10, 15);
 
-            // Use a category axis for the bottom axis.
-            XDDFCategoryAxis bottomAxis = chart.createCategoryAxis(AxisPosition.BOTTOM);
-            bottomAxis.setTitle("Time"); // https://stackoverflow.com/questions/32010765
-            XDDFValueAxis leftAxis = chart.createValueAxis(AxisPosition.LEFT);
-            leftAxis.setTitle("%");
-            leftAxis.setCrosses(AxisCrosses.AUTO_ZERO);
+			XSSFChart chart = drawing.createChart(anchor);
+			XDDFChartLegend legend = chart.getOrAddLegend();
+			legend.setPosition(LegendPosition.TOP_RIGHT);
 
-            XDDFDataSource<Double> xs = XDDFDataSourcesFactory.fromNumericCellRange(sheet, new CellRangeAddress(0, 0, 0, NUM_OF_COLUMNS - 1));
-            XDDFNumericalDataSource<Double> ys1 = XDDFDataSourcesFactory.fromNumericCellRange(sheet, new CellRangeAddress(1, 1, 0, NUM_OF_COLUMNS - 1));
-            XDDFNumericalDataSource<Double> ys2 = XDDFDataSourcesFactory.fromNumericCellRange(sheet, new CellRangeAddress(2, 2, 0, NUM_OF_COLUMNS - 1));
+			// Use a category axis for the bottom axis.
+			XDDFCategoryAxis bottomAxis = chart.createCategoryAxis(AxisPosition.BOTTOM);
+			bottomAxis.setTitle("Time"); // https://stackoverflow.com/questions/32010765
+			XDDFValueAxis leftAxis = chart.createValueAxis(AxisPosition.LEFT);
+			leftAxis.setTitle("%");
+			leftAxis.setCrosses(AxisCrosses.AUTO_ZERO);
 
-            XDDFLineChartData data = (XDDFLineChartData) chart.createData(ChartTypes.LINE, bottomAxis, leftAxis);
-            XDDFLineChartData.Series series1 = (XDDFLineChartData.Series) data.addSeries(xs, ys1);
-            series1.setTitle("average CPU percent", null); // https://stackoverflow.com/questions/21855842
-            series1.setSmooth(false); // https://stackoverflow.com/questions/29014848
-            series1.setMarkerStyle(MarkerStyle.STAR); // https://stackoverflow.com/questions/39636138
-            XDDFLineChartData.Series series2 = (XDDFLineChartData.Series) data.addSeries(xs, ys2);
-            series2.setTitle("average RAM percent", null);
-            series2.setSmooth(true);
-            series2.setMarkerSize((short) 6);
-            series2.setMarkerStyle(MarkerStyle.TRIANGLE); // https://stackoverflow.com/questions/39636138
-            chart.plot(data);
+			XDDFDataSource<Double> xs = XDDFDataSourcesFactory.fromNumericCellRange(sheet,
+					new CellRangeAddress(0, 0, 0, NUM_OF_COLUMNS - 1));
+			XDDFNumericalDataSource<Double> ys1 = XDDFDataSourcesFactory.fromNumericCellRange(sheet,
+					new CellRangeAddress(1, 1, 0, NUM_OF_COLUMNS - 1));
+			XDDFNumericalDataSource<Double> ys2 = XDDFDataSourcesFactory.fromNumericCellRange(sheet,
+					new CellRangeAddress(2, 2, 0, NUM_OF_COLUMNS - 1));
 
-            // if your series have missing values like https://stackoverflow.com/questions/29014848
-            // chart.displayBlanksAs(DisplayBlanks.GAP);
+			XDDFLineChartData data = (XDDFLineChartData) chart.createData(ChartTypes.LINE, bottomAxis, leftAxis);
+			XDDFLineChartData.Series series1 = (XDDFLineChartData.Series) data.addSeries(xs, ys1);
+			series1.setTitle("average CPU percent", null); // https://stackoverflow.com/questions/21855842
+			series1.setSmooth(false); // https://stackoverflow.com/questions/29014848
+			series1.setMarkerStyle(MarkerStyle.STAR); // https://stackoverflow.com/questions/39636138
+			XDDFLineChartData.Series series2 = (XDDFLineChartData.Series) data.addSeries(xs, ys2);
+			series2.setTitle("average RAM percent", null);
+			series2.setSmooth(true);
+			series2.setMarkerSize((short) 6);
+			series2.setMarkerStyle(MarkerStyle.TRIANGLE); // https://stackoverflow.com/questions/39636138
+			chart.plot(data);
 
-            // https://stackoverflow.com/questions/24676460
-            solidLineSeries(data, 0, PresetColor.CHARTREUSE);
-            solidLineSeries(data, 1, PresetColor.TURQUOISE);
+			// if your series have missing values like
+			// https://stackoverflow.com/questions/29014848
+			// chart.displayBlanksAs(DisplayBlanks.GAP);
 
-            // Write the output to a file
-            try (FileOutputStream fileOut = new FileOutputStream("src/main/resources/GeneratedReport.xlsx")) {
-                wb.write(fileOut);
-            }
-        }
-    }
+			// https://stackoverflow.com/questions/24676460
+			solidLineSeries(data, 0, PresetColor.CHARTREUSE);
+			solidLineSeries(data, 1, PresetColor.TURQUOISE);
 
-    private static void solidLineSeries(XDDFChartData data, int index, PresetColor color) {
-        XDDFSolidFillProperties fill = new XDDFSolidFillProperties(XDDFColor.from(color));
-        XDDFLineProperties line = new XDDFLineProperties();
-        line.setFillProperties(fill);
-        XDDFChartData.Series series = data.getSeries().get(index);
-        XDDFShapeProperties properties = series.getShapeProperties();
-        if (properties == null) {
-            properties = new XDDFShapeProperties();
-        }
-        properties.setLineProperties(line);
-        series.setShapeProperties(properties);
-    }
+			// Write the output to a file
+			try (FileOutputStream fileOut = new FileOutputStream("src/main/resources/GeneratedReport.xlsx")) {
+				wb.write(fileOut);
+			}
+		}
+	}
+
+	private static void solidLineSeries(XDDFChartData data, int index, PresetColor color) {
+		XDDFSolidFillProperties fill = new XDDFSolidFillProperties(XDDFColor.from(color));
+		XDDFLineProperties line = new XDDFLineProperties();
+		line.setFillProperties(fill);
+		XDDFChartData.Series series = data.getSeries().get(index);
+		XDDFShapeProperties properties = series.getShapeProperties();
+		if (properties == null) {
+			properties = new XDDFShapeProperties();
+		}
+		properties.setLineProperties(line);
+		series.setShapeProperties(properties);
+	}
+
+	public static String drawChartToImage(Map<String, Map<String, Float>> fieldMap, List<String> groups) throws IOException, ParseException {
+		String title = "";
+		for (String group: groups) title += group + " ";
+		
+		TimeSeriesCollection dataset = new TimeSeriesCollection();
+		for (String field: fieldMap.keySet()) {
+			TimeSeries series = new TimeSeries(field);
+			Map<String, Float> timeMap = fieldMap.get(field);
+			for (String time: timeMap.keySet()) {
+				SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+				Date date = sdf.parse(time);
+				series.add(new Second(date), timeMap.get(time));
+			}
+			dataset.addSeries(series);
+		}
+		
+		JFreeChart chart = ChartFactory.createXYLineChart(title, "Time", "Percent", 
+				dataset, PlotOrientation.VERTICAL, true, false, false);
+		
+		XYPlot xyplot = (XYPlot) chart.getXYPlot();
+		xyplot.setDomainAxis(new DateAxis());
+		DateAxis axis = (DateAxis) xyplot.getDomainAxis();
+		axis.setDateFormatOverride(new SimpleDateFormat("HH:mm"));
+		NumberAxis range = (NumberAxis) xyplot.getRangeAxis();
+		range.setRange(0.0, 100.0);
+		
+		String outPath = "src/main/resources/chart.png";
+		OutputStream out = new FileOutputStream(outPath);
+		ChartUtilities.writeChartAsPNG(out,	chart, 1000, 400);
+		
+		return outPath;
+	}
 }
